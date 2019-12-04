@@ -392,7 +392,7 @@ offset ns offset_ =
 order : List String -> Order -> List QueryParameter
 order ns =
     List.map <|
-        \( column, direction ) ->
+        \( attribute, direction ) ->
             let
                 keyNs =
                     List.foldl (\attrName result -> result ++ "[" ++ attrName ++ "]")
@@ -400,7 +400,7 @@ order ns =
                         ns
 
                 key =
-                    keyNs ++ "order[" ++ column ++ "]"
+                    keyNs ++ "order[" ++ attribute ++ "]"
 
                 value =
                     case direction of

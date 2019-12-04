@@ -1,12 +1,12 @@
 module StandardApi.Schema exposing
-    ( Schema, Route, Model, Column
-    , schemaDecoder, modelDecoder, columnDecoder
+    ( Schema, Route, Model, Attribute
+    , schemaDecoder, modelDecoder, attributeDecoder
     )
 
 {-| Functions for working with the StandardAPI schema.
 
-@docs Schema, Route, Model, Column
-@docs schemaDecoder, modelDecoder, columnDecoder
+@docs Schema, Route, Model, Attribute
+@docs schemaDecoder, modelDecoder, attributeDecoder
 
 -}
 
@@ -39,15 +39,17 @@ type alias Route =
 {-| A StandardAPI model definition.
 -}
 type alias Model =
-    { columns : Dict String Column
+    { name : String
+    , attributes : Dict String Attribute
     , comment : String
     }
 
 
-{-| A StandardAPI column definition.
+{-| A StandardAPI attribute definition.
 -}
-type alias Column =
-    { type_ : String
+type alias Attribute =
+    { name : String
+    , type_ : String
     , default : Maybe String
     , primaryKey : Bool
     , null : Bool
@@ -91,15 +93,17 @@ routeDecoder models =
 modelDecoder : Decoder Model
 modelDecoder =
     Decode.succeed Model
-        |> required "columns" (dict columnDecoder)
+        |> required "name" string
+        |> required "attributes" (dict attributeDecoder)
         |> required "comment" (maybe string |> map (Maybe.withDefault ""))
 
 
-{-| Decode a JSON value into a `Column`.
+{-| Decode a JSON value into a `Attribute`.
 -}
-columnDecoder : Decoder Column
-columnDecoder =
-    Decode.succeed Column
+attributeDecoder : Decoder Attribute
+attributeDecoder =
+    Decode.succeed Attribute
+        |> required "name" string
         |> required "type" string
         |> required "default" (maybe string)
         |> required "primary_key" bool
