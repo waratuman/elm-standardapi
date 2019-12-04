@@ -1,0 +1,9 @@
+{
+    "root": "../src",
+    "tests": [
+        "StandardApi",
+        "StandardApi.Parser",
+        "StandardApi.Schema",
+        "./README.md"
+    ]
+}
