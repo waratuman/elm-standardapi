@@ -1,19 +1,19 @@
 module StandardApi.Schema exposing
     ( Schema, Route, Model, Attribute
-    , schemaDecoder, modelDecoder, attributeDecoder
+    , schemaDecoder
     )
 
 {-| Functions for working with the StandardAPI schema.
 
 @docs Schema, Route, Model, Attribute
-@docs schemaDecoder, modelDecoder, attributeDecoder
+@docs schemaDecoder
 
 -}
 
 import Dict exposing (Dict)
 import Json.Decode as Decode exposing (..)
 import Json.Decode.Extra as Decode exposing (..)
-import Json.Decode.Pipeline exposing (required)
+import Json.Decode.Pipeline exposing (hardcoded, required)
 
 
 {-| A StandardAPI schema definition.
@@ -70,7 +70,7 @@ schemaDecoder =
             }
         )
         (field "comment" (maybe string |> map (Maybe.withDefault "")))
-        (field "models" (dict modelDecoder))
+        (field "models" (map (Dict.map (\k v -> { v | name = k })) (dict modelDecoder)))
         |> Decode.andThen
             (\schema ->
                 field "routes" (list (routeDecoder schema.models))
@@ -93,8 +93,8 @@ routeDecoder models =
 modelDecoder : Decoder Model
 modelDecoder =
     Decode.succeed Model
-        |> required "name" string
-        |> required "attributes" (dict attributeDecoder)
+        |> hardcoded ""
+        |> required "attributes" (map (Dict.map (\k v -> { v | name = k })) (dict attributeDecoder))
         |> required "comment" (maybe string |> map (Maybe.withDefault ""))
 
 
@@ -103,7 +103,7 @@ modelDecoder =
 attributeDecoder : Decoder Attribute
 attributeDecoder =
     Decode.succeed Attribute
-        |> required "name" string
+        |> hardcoded ""
         |> required "type" string
         |> required "default" (maybe string)
         |> required "primary_key" bool
