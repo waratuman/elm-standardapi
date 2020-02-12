@@ -49,7 +49,7 @@ For example you can make queries like the following:
 
 -}
 
-import Http exposing (Body, Expect, Header)
+import Http exposing (Body, Expect, Header, Resolver)
 import Iso8601
 import Json.Decode exposing (Decoder)
 import StandardApi.Schema exposing (Schema)
@@ -267,10 +267,10 @@ requestTask :
         , headers : List Header
         , path : String
         , body : Body
-        , resolver : Http.Resolver x a
+        , decoder : Decoder a
         }
-    -> Task x a
-requestTask config { method, headers, path, body, resolver } =
+    -> Task Error a
+requestTask config { method, headers, path, body, decoder } =
     let
         baseUrl =
             config.url
@@ -288,7 +288,7 @@ requestTask config { method, headers, path, body, resolver } =
                 |> List.append headers
         , url = Url.toString url
         , body = body
-        , resolver = resolver
+        , resolver = jsonResolver decoder
         , timeout = config.timeout
         }
 
@@ -346,6 +346,34 @@ expectJson toMsg decoder =
             (Json.Decode.decodeString decoder
                 >> Result.mapError Json.Decode.errorToString
             )
+
+
+jsonResolver : Decoder a -> Resolver Error a
+jsonResolver decoder =
+    Http.stringResolver
+        (\response ->
+            case response of
+                Http.BadUrl_ url ->
+                    Err (BadUrl url)
+
+                Http.Timeout_ ->
+                    Err Timeout
+
+                Http.NetworkError_ ->
+                    Err NetworkError
+
+                Http.BadStatus_ metadata body ->
+                    Err <|
+                        BadStatus metadata.statusCode body
+
+                Http.GoodStatus_ metadata body ->
+                    case Json.Decode.decodeString decoder body of
+                        Ok value ->
+                            Ok value
+
+                        Err err ->
+                            Err (BadBody (Json.Decode.errorToString err))
+        )
 
 
 {-| Set the `limit` of a query parameter to send to a StandardAPI server.
