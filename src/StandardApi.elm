@@ -2,7 +2,7 @@ module StandardApi exposing
     ( Config
     , schemaRequest
     , Error(..)
-    , errorToString, request, requestTask, jsonResolver
+    , errorToString, request, requestTask, expectJson, expectWhatever, jsonResolver
     , Comparison(..), Direction(..), Limit, Offset, Order, Predicate
     , bool, float, int, iso8601, limit, offset, order, predicate, string
     )
@@ -29,7 +29,7 @@ For example you can make queries like the following:
 # Requests
 
 @docs Error
-@docs errorToString, request, requestTask, jsonResolver
+@docs errorToString, request, requestTask, expectJson, expectWhatever, jsonResolver
 
 
 # Querying
@@ -229,12 +229,11 @@ request :
         , headers : List Header
         , path : String
         , body : Body
-        , msg : Result Error a -> msg
-        , decoder : Decoder a
+        , expect : Expect msg
         , tracker : Maybe String
         }
     -> Cmd msg
-request config { method, headers, path, body, msg, decoder, tracker } =
+request config { method, headers, path, body, expect, tracker } =
     let
         baseUrl =
             config.url
@@ -253,7 +252,7 @@ request config { method, headers, path, body, msg, decoder, tracker } =
         , url = Url.toString url
         , body = body
         , timeout = config.timeout
-        , expect = expectJson msg decoder
+        , expect = expect
         , tracker = tracker
         }
 
@@ -308,8 +307,7 @@ schemaRequest config { msg, tracker } =
         , headers = []
         , path = "/schema"
         , body = Http.emptyBody
-        , msg = msg
-        , decoder = StandardApi.Schema.schemaDecoder
+        , expect = expectJson msg StandardApi.Schema.schemaDecoder
         , tracker = tracker
         }
 
@@ -339,6 +337,34 @@ responseDecoder decoder response =
                     Err (BadBody err)
 
 
+{-| Just like [`Http.expectWhatever`](https://package.elm-lang.org/packages/elm/http/latest/Http#expectWhatever),
+but for decoding a JSON value in StandardAPI.
+-}
+expectWhatever : (Result Error () -> msg) -> Expect msg
+expectWhatever toMsg =
+    Http.expectStringResponse toMsg <|
+        \response ->
+            case response of
+                Http.BadUrl_ url ->
+                    Err (BadUrl url)
+
+                Http.Timeout_ ->
+                    Err Timeout
+
+                Http.NetworkError_ ->
+                    Err NetworkError
+
+                Http.BadStatus_ metadata body ->
+                    Err <|
+                        BadStatus metadata.statusCode ""
+
+                Http.GoodStatus_ metadata body ->
+                    Ok ()
+
+
+{-| Just like [`Http.expectJson`](https://package.elm-lang.org/packages/elm/http/latest/Http#expectJson),
+but for decoding a JSON value in StandardAPI.
+-}
 expectJson : (Result Error a -> msg) -> Decoder a -> Expect msg
 expectJson toMsg decoder =
     Http.expectStringResponse toMsg <|
