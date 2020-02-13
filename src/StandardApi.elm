@@ -2,7 +2,7 @@ module StandardApi exposing
     ( Config
     , schemaRequest
     , Error(..)
-    , errorToString, request, requestTask
+    , errorToString, request, requestTask, jsonResolver
     , Comparison(..), Direction(..), Limit, Offset, Order, Predicate
     , bool, float, int, iso8601, limit, offset, order, predicate, string
     )
@@ -29,7 +29,7 @@ For example you can make queries like the following:
 # Requests
 
 @docs Error
-@docs errorToString, request, requestTask
+@docs errorToString, request, requestTask, jsonResolver
 
 
 # Querying
@@ -348,6 +348,9 @@ expectJson toMsg decoder =
             )
 
 
+{-| Just like [`Http.stringResolver`](https://package.elm-lang.org/packages/elm/http/latest/Http#stringResolver),
+but for decoding a JSON value.
+-}
 jsonResolver : Decoder a -> Resolver Error a
 jsonResolver decoder =
     Http.stringResolver
