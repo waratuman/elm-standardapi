@@ -267,10 +267,10 @@ requestTask :
         , headers : List Header
         , path : String
         , body : Body
-        , decoder : Decoder a
+        , resolver : Resolver Error a
         }
     -> Task Error a
-requestTask config { method, headers, path, body, decoder } =
+requestTask config { method, headers, path, body, resolver } =
     let
         baseUrl =
             config.url
@@ -288,7 +288,7 @@ requestTask config { method, headers, path, body, decoder } =
                 |> List.append headers
         , url = Url.toString url
         , body = body
-        , resolver = jsonResolver decoder
+        , resolver = resolver
         , timeout = config.timeout
         }
 
