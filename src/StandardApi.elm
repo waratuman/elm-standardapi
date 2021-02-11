@@ -2,7 +2,9 @@ module StandardApi exposing
     ( Config
     , schemaRequest
     , Error(..)
-    , errorToString, request, requestTask, expectJson, expectWhatever, jsonResolver
+    , errorToString, request, requestTask
+    , emptyBody, jsonBody
+    , expectJson, expectWhatever, jsonResolver
     , Comparison(..), Direction(..), Limit, Offset, Order, Predicate
     , bool, float, int, iso8601, limit, offset, order, predicate, string
     )
@@ -29,7 +31,17 @@ For example you can make queries like the following:
 # Requests
 
 @docs Error
-@docs errorToString, request, requestTask, expectJson, expectWhatever, jsonResolver
+@docs errorToString, request, requestTask
+
+
+# Body
+
+@docs emptyBody, jsonBody
+
+
+# Expect
+
+@docs expectJson, expectWhatever, jsonResolver
 
 
 # Querying
@@ -52,6 +64,7 @@ For example you can make queries like the following:
 import Http exposing (Body, Expect, Header, Resolver)
 import Iso8601
 import Json.Decode exposing (Decoder)
+import Json.Encode as Encode
 import StandardApi.Schema exposing (Schema)
 import Task exposing (Task)
 import Time exposing (Posix)
@@ -567,3 +580,19 @@ ISO8601 string, of a query parameter to send to a StandardAPI Server.
 iso8601 : List String -> Predicate Posix -> List QueryParameter
 iso8601 =
     predicate Iso8601.fromTime
+
+
+{-| Put a JSON value in the body of the request. This is simply an alias for
+`Http.jsonBody` so you don't need to import `Http`.
+-}
+jsonBody : Encode.Value -> Body
+jsonBody =
+    Http.jsonBody
+
+
+{-| An empty body for a request. This is simply an alias for
+`Http.emptyBody` so you don't need to import `Http`.
+-}
+emptyBody : Body
+emptyBody =
+    Http.emptyBody
