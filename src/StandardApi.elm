@@ -5,7 +5,7 @@ module StandardApi exposing
     , errorToString, request, requestTask
     , emptyBody, jsonBody
     , expectJson, expectWhatever, jsonResolver
-    , Comparison(..), Direction(..), Limit, Offset, Order, Predicate
+    , Query, Comparison(..), Direction(..), Limit, Offset, Order, Predicate
     , bool, float, int, iso8601, limit, offset, order, predicate, string
     )
 
@@ -46,7 +46,7 @@ For example you can make queries like the following:
 
 # Querying
 
-@docs Comparison, Direction, Limit, Offset, Order, Predicate
+@docs Query, Comparison, Direction, Limit, Offset, Order, Predicate
 
 
 ## Generation
@@ -150,6 +150,15 @@ type alias Config =
     , format : String
     , version : String
     }
+
+
+type alias Query a =
+    Maybe
+        { limit : Limit
+        , order : Order
+        , offset : Offset
+        , predicate : Predicate a
+        }
 
 
 {-| The `Comparison` type is used for making comparinsons in a predicate.
