@@ -2,11 +2,12 @@ module StandardApi exposing
     ( Config
     , schemaRequest
     , Error(..)
-    , errorToString, request, requestTask
+    , errorToString, request, requestTask, cancel
     , emptyBody, jsonBody
     , expectJson, expectWhatever, jsonResolver
-    , Query, Comparison(..), Direction(..), Limit, Offset, Order, Predicate
-    , bool, float, int, iso8601, limit, offset, order, predicate, string
+    , Query, Operator(..), Direction(..), Limit, Offset, Order, Predicate, Value(..), Include(..)
+    , emptyQuery, include, unwrapInclude
+    -- , bool, float, int, iso8601, predicate, string
     )
 
 {-| Module for interfacing with StandardAPI.
@@ -31,7 +32,7 @@ For example you can make queries like the following:
 # Requests
 
 @docs Error
-@docs errorToString, request, requestTask
+@docs errorToString, request, requestTask, cancel
 
 
 # Body
@@ -46,12 +47,8 @@ For example you can make queries like the following:
 
 # Querying
 
-@docs Query, Comparison, Direction, Limit, Offset, Order, Predicate
-
-
-## Generation
-
-@docs bool, float, int, iso8601, limit, offset, order, predicate, string
+@docs Query, Operator, Direction, Limit, Offset, Order, Predicate, Value, Include
+@docs emptyQuery, include, unwrapInclude
 
 
 # Url generation
@@ -62,12 +59,12 @@ For example you can make queries like the following:
 -}
 
 import Http exposing (Body, Expect, Header, Resolver)
-import Iso8601
 import Json.Decode exposing (Decoder)
 import Json.Encode as Encode
 import StandardApi.Schema exposing (Schema)
 import Task exposing (Task)
 import Time exposing (Posix)
+import Tree exposing (Tree)
 import Url exposing (Url)
 import Url.Builder as Builder exposing (QueryParameter)
 
@@ -152,29 +149,37 @@ type alias Config =
     }
 
 
-type alias Query a =
-    Maybe
-        { limit : Limit
-        , order : Order
-        , offset : Offset
-        , predicate : Predicate a
-        }
+type alias Query =
+    { limit : Limit
+    , order : Order
+    , offset : Offset
+    , wheres : List Predicate
+    , includes : List (Tree Include)
+    }
 
 
-{-| The `Comparison` type is used for making comparinsons in a predicate.
+type Value
+    = Int Int
+    | String String
+    | Float Float
+    | Bool Bool
+    | Posix Posix
+
+
+{-| The `Operator` type is used for making comparinsons in a predicate.
 -}
-type Comparison a
-    = Ilike a
-    | In (List a)
-    | NotIn (List a)
-    | Lt a
-    | Lte a
-    | Eq a
-    | Gt a
-    | Gte a
+type Operator
+    = Ilike Value
+    | In (List Value)
+    | NotIn (List Value)
+    | Lt Value
+    | Lte Value
+    | Eq Value
+    | Gt Value
+    | Gte Value
     | Null
     | Set
-    | Overlaps (List a)
+    | Overlaps (List Value)
 
 
 {-| The `Direction` type is used to order a query.
@@ -207,11 +212,54 @@ type alias Offset =
     Maybe Int
 
 
-{-| A `Predicate` is a list of comparisons to be used when building a query. If
-this were SQL, it would be the part the `WHERE` portion.
+{-| A `Predicate` is a list of conditions to be used when building a query. If
+this were SQL, it would be part the `WHERE` or `HAVING` clauses.
 -}
-type alias Predicate a =
-    List (Comparison a)
+type alias Predicate =
+    ( String, Operator )
+
+
+type Include
+    = Include ( String, Query )
+
+
+{-| Helper method to generate an include.
+
+    import StandardApi exposing (..)
+
+    include ("users", { emptyQuery | limit = Just 1 })
+    --> Include ("users", { emptyQuery | limit = Just 1 })
+
+-}
+include : ( String, Query ) -> Include
+include =
+    Include
+
+
+{-| Helper method to unwrap and include into the name of the include and its
+subinclude. This is necessary due to recursion in the types.
+
+    import StandardApi exposing (..)
+
+    unwrapInclude (include ("users", { emptyQuery | limit = Just 1 }))
+    --> ("users", { emptyQuery | limit = Just 1 })
+
+-}
+unwrapInclude : Include -> ( String, Query )
+unwrapInclude (Include include_) =
+    include_
+
+
+{-| An empty query.
+-}
+emptyQuery : Query
+emptyQuery =
+    { limit = Nothing
+    , order = []
+    , offset = Nothing
+    , wheres = []
+    , includes = []
+    }
 
 
 {-| Create a HTTP request to a StandardAPI enpoint.
@@ -277,6 +325,13 @@ request config { method, headers, path, body, expect, tracker } =
         , expect = expect
         , tracker = tracker
         }
+
+
+{-| Try to cancel an ongoing request based on a tracker.
+-}
+cancel : String -> Cmd msg
+cancel =
+    Http.cancel
 
 
 {-| Just like [`request`](#request), but it creates a `Task`.
@@ -425,170 +480,6 @@ jsonResolver decoder =
                         Err err ->
                             Err (BadBody (Json.Decode.errorToString err))
         )
-
-
-{-| Set the `limit` of a query parameter to send to a StandardAPI server.
--}
-limit : List String -> Limit -> List QueryParameter
-limit ns limit_ =
-    case limit_ of
-        Just l ->
-            let
-                attrKey =
-                    List.foldl (\attrName result -> result ++ "[" ++ attrName ++ "]")
-                        ""
-                        ns
-            in
-            [ Builder.int (attrKey ++ "limit") l ]
-
-        Nothing ->
-            []
-
-
-{-| Set the `offset` of a query parameter to send to a StandardAPI server.
--}
-offset : List String -> Offset -> List QueryParameter
-offset ns offset_ =
-    case offset_ of
-        Just l ->
-            let
-                attrKey =
-                    List.foldl (\attrName result -> result ++ "[" ++ attrName ++ "]")
-                        ""
-                        ns
-            in
-            [ Builder.int (attrKey ++ "offset") l ]
-
-        Nothing ->
-            []
-
-
-{-| Set the `order` of a query parameter to send to a StandardAPI server.
-
-    order [] [ ( "created_at", Desc ) ]
-
--}
-order : List String -> Order -> List QueryParameter
-order ns =
-    List.map <|
-        \( attribute, direction ) ->
-            let
-                keyNs =
-                    List.foldl (\attrName result -> result ++ "[" ++ attrName ++ "]")
-                        ""
-                        ns
-
-                key =
-                    keyNs ++ "order[" ++ attribute ++ "]"
-
-                value =
-                    case direction of
-                        Asc ->
-                            "asc"
-
-                        Desc ->
-                            "desc"
-            in
-            Builder.string key value
-
-
-{-| Set the `predicate` (the where clause) of a parameter to send to a
-StandardAPI server.
--}
-predicate : (a -> String) -> List String -> Predicate a -> List QueryParameter
-predicate func attributeNames =
-    List.foldl
-        (\condition acc ->
-            acc
-                ++ (let
-                        attrKey =
-                            List.foldl (\attrName result -> result ++ "[" ++ attrName ++ "]")
-                                "where"
-                                attributeNames
-                    in
-                    case condition of
-                        Ilike value ->
-                            [ Builder.string (attrKey ++ "[ilike]") (func value) ]
-
-                        In values ->
-                            List.map (func >> Builder.string (attrKey ++ "[]")) values
-
-                        NotIn values ->
-                            List.map (func >> Builder.string (attrKey ++ "[not_in][]")) values
-
-                        Lt value ->
-                            [ Builder.string (attrKey ++ "[lt]") (func value) ]
-
-                        Lte value ->
-                            [ Builder.string (attrKey ++ "[lte]") (func value) ]
-
-                        Eq value ->
-                            [ Builder.string (attrKey ++ "[eq]") (func value) ]
-
-                        Gt value ->
-                            [ Builder.string (attrKey ++ "[gt]") (func value) ]
-
-                        Gte value ->
-                            [ Builder.string (attrKey ++ "[gte]") (func value) ]
-
-                        Null ->
-                            [ Builder.string attrKey "false" ]
-
-                        Set ->
-                            [ Builder.string attrKey "true" ]
-
-                        Overlaps values ->
-                            List.map (func >> Builder.string (attrKey ++ "[overlaps][]")) values
-                   )
-        )
-        []
-
-
-{-| Set a `predicate`, where the value is a `String`, of a query parameter to
-send to a StandardAPI Server.
--}
-string : List String -> Predicate String -> List QueryParameter
-string =
-    predicate identity
-
-
-{-| Set a `predicate`, where the value is a `Int`, of a query parameter to send
-to a StandardAPI Server.
--}
-int : List String -> Predicate Int -> List QueryParameter
-int =
-    predicate String.fromInt
-
-
-{-| Set a `predicate`, where the value is a `Float`, of a query parameter to
-send to a StandardAPI Server.
--}
-float : List String -> Predicate Float -> List QueryParameter
-float =
-    predicate String.fromFloat
-
-
-{-| Set a `predicate`, where the value is a `Bool`, of a query parameter to send
-to a StandardAPI Server.
--}
-bool : List String -> Predicate Bool -> List QueryParameter
-bool =
-    predicate
-        (\v ->
-            if v then
-                "true"
-
-            else
-                "false"
-        )
-
-
-{-| Set a `predicate`, where the value is a `Posix` that is represented as a
-ISO8601 string, of a query parameter to send to a StandardAPI Server.
--}
-iso8601 : List String -> Predicate Posix -> List QueryParameter
-iso8601 =
-    predicate Iso8601.fromTime
 
 
 {-| Put a JSON value in the body of the request. This is simply an alias for

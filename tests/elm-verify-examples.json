@@ -2,7 +2,9 @@
     "root": "../src",
     "tests": [
         "StandardApi",
-        "StandardApi.Parser",
+        "StandardApi.Url.Builder",
+        "StandardApi.Url.Parser",
+        "StandardApi.Url.Parser.Query",
         "StandardApi.Schema",
         "./README.md"
     ]
