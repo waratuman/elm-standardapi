@@ -1,6 +1,7 @@
 module StandardApi exposing
     ( Config
-    , schemaRequest
+    , Schema, Route, Model, Attribute
+    , schemaRequest, schemaRequestTask
     , Error(..)
     , errorToString, request, requestTask, cancel
     , emptyBody, jsonBody
@@ -26,7 +27,8 @@ For example you can make queries like the following:
 
 # Schema
 
-@docs schemaRequest
+@docs Schema, Route, Model, Attribute
+@docs schemaRequest, schemaRequestTask
 
 
 # Requests
@@ -58,13 +60,15 @@ For example you can make queries like the following:
 
 -}
 
+import Dict exposing (Dict)
 import Http exposing (Body, Expect, Header, Resolver)
-import Json.Decode exposing (Decoder)
+import Json.Decode as Decode exposing (..)
+import Json.Decode.Extra as Decode exposing (..)
+import Json.Decode.Pipeline exposing (hardcoded, required)
 import Json.Encode as Encode
-import StandardApi.Schema exposing (Schema)
 import Task exposing (Task)
 import Time exposing (Posix)
-import Tree exposing (Tree)
+import Tree exposing (Tree, tree)
 import Url exposing (Url)
 import Url.Builder as Builder exposing (QueryParameter)
 
@@ -369,6 +373,51 @@ requestTask config { method, headers, path, body, resolver } =
         }
 
 
+{-| A StandardAPI schema definition.
+-}
+type alias Schema =
+    { comment : String
+    , models : List Model
+    , routes : List Route
+    }
+
+
+{-| A StandardAPI route definition.
+-}
+type alias Route =
+    { path : String
+    , method : String
+    , model : Maybe Model
+    , array : Bool
+    , limit : Maybe Int
+    , wheres : List Attribute
+    , orders : List String
+    , includes : List (Tree String)
+    }
+
+
+{-| A StandardAPI model definition.
+-}
+type alias Model =
+    { name : String
+    , attributes : List Attribute
+    , comment : String
+    }
+
+
+{-| A StandardAPI attribute definition.
+-}
+type alias Attribute =
+    { name : String
+    , type_ : String
+    , default : Maybe String
+    , primaryKey : Bool
+    , null : Bool
+    , array : Bool
+    , comment : String
+    }
+
+
 {-| Request the `Schema` from a StandardAPI resource.
 -}
 schemaRequest :
@@ -384,9 +433,119 @@ schemaRequest config { msg, tracker } =
         , headers = []
         , path = "/schema"
         , body = Http.emptyBody
-        , expect = expectJson msg StandardApi.Schema.schemaDecoder
+        , expect = expectJson msg schemaDecoder
         , tracker = tracker
         }
+
+
+schemaRequestTask :
+    Config
+    -> Task Error Schema
+schemaRequestTask config =
+    requestTask config
+        { method = "GET"
+        , headers = []
+        , path = "/schema"
+        , body = Http.emptyBody
+        , resolver = jsonResolver schemaDecoder
+        }
+
+
+{-| Decode a JSON value into a `Schema`.
+-}
+schemaDecoder : Decoder Schema
+schemaDecoder =
+    Decode.map2
+        (\comment models ->
+            { comment = comment
+            , models = models
+            , routes = []
+            }
+        )
+        (field "comment" (maybe string |> map (Maybe.withDefault "")))
+        (field "models"
+            (map Dict.values
+                (map
+                    (Dict.map (\k v -> { v | name = k }))
+                    (dict modelDecoder)
+                )
+            )
+        )
+        |> Decode.andThen
+            (\schema ->
+                field "routes" (list (routeDecoder schema.models))
+                    |> Decode.map (\routes -> { schema | routes = List.sortBy .path routes })
+            )
+
+
+routeDecoder : List Model -> Decoder Route
+routeDecoder models =
+    Decode.succeed Route
+        |> required "path" string
+        |> required "method" string
+        |> required "model"
+            (maybe string
+                |> map (Maybe.andThen (\name -> List.filter (\x -> x.name == name) models |> List.head))
+            )
+        |> required "array" bool
+        |> required "limit" (maybe int)
+        |> required "wheres"
+            (map (Maybe.withDefault [])
+                (maybe
+                    (map (Dict.map (\k v -> { v | name = k }) >> Dict.values) (dict attributeDecoder))
+                )
+            )
+        |> required "orders"
+            (map (Maybe.withDefault []) (maybe (list string)))
+        |> required "includes" includesDecoder
+
+
+includesDecoder : Decoder (List (Tree String))
+includesDecoder =
+    Decode.oneOf
+        [ Decode.null []
+        , Decode.map (\x -> [ Tree.singleton x ]) string
+        , list string |> Decode.map (List.map Tree.singleton)
+        , keyValuePairs
+            (Decode.oneOf
+                [ map (\_ -> []) bool
+                , lazy (\_ -> includesDecoder)
+                ]
+            )
+            |> Decode.map
+                (List.foldr
+                    (\( relation, subIncludes ) acc ->
+                        tree relation subIncludes :: acc
+                    )
+                    []
+                )
+        , list (lazy (\_ -> includesDecoder))
+            |> Decode.map (List.foldr (++) [])
+        ]
+
+
+{-| Decode a JSON value into a `Model`.
+-}
+modelDecoder : Decoder Model
+modelDecoder =
+    Decode.succeed Model
+        |> hardcoded ""
+        |> required "attributes" (map (Dict.map (\k v -> { v | name = k }) >> Dict.values) (dict attributeDecoder))
+        |> required "comment" (maybe string |> map (Maybe.withDefault ""))
+
+
+{-| Decode a JSON value into a `Attribute`.
+-}
+attributeDecoder : Decoder Attribute
+attributeDecoder =
+    Decode.succeed Attribute
+        |> hardcoded ""
+        |> required "type" string
+        |> required "default" (maybe string)
+        |> required "primary_key" bool
+        |> required "null" bool
+        |> required "array" bool
+        |> required "comment" (maybe string |> map (Maybe.withDefault ""))
 
 
 responseDecoder : (String -> Result String a) -> Http.Response String -> Result Error a
@@ -446,8 +605,8 @@ expectJson : (Result Error a -> msg) -> Decoder a -> Expect msg
 expectJson toMsg decoder =
     Http.expectStringResponse toMsg <|
         responseDecoder
-            (Json.Decode.decodeString decoder
-                >> Result.mapError Json.Decode.errorToString
+            (Decode.decodeString decoder
+                >> Result.mapError Decode.errorToString
             )
 
 
@@ -473,12 +632,12 @@ jsonResolver decoder =
                         BadStatus metadata.statusCode body
 
                 Http.GoodStatus_ metadata body ->
-                    case Json.Decode.decodeString decoder body of
+                    case Decode.decodeString decoder body of
                         Ok value ->
                             Ok value
 
                         Err err ->
-                            Err (BadBody (Json.Decode.errorToString err))
+                            Err (BadBody (Decode.errorToString err))
         )
 
 

@@ -5,7 +5,6 @@
         "StandardApi.Url.Builder",
         "StandardApi.Url.Parser",
         "StandardApi.Url.Parser.Query",
-        "StandardApi.Schema",
         "./README.md"
     ]
 }
