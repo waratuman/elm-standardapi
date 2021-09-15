@@ -12,6 +12,7 @@ module StandardApi.Url.Builder exposing
 
 -}
 
+import Dict
 import Iso8601
 import StandardApi exposing (..)
 import String
@@ -45,7 +46,7 @@ query ns query_ =
         [ order ns query_.order
         , limit ns query_.limit
         , offset ns query_.offset
-        , predicate ns query_.wheres
+        , Maybe.withDefault [] (Maybe.map (predicate ns) query_.predicate)
         , includes ns query_.includes
         ]
 
@@ -71,7 +72,7 @@ subQuery ns query_ =
         [ order ns query_.order
         , limit ns query_.limit
         , offset ns query_.offset
-        , predicate ns query_.wheres
+        , Maybe.withDefault [] (Maybe.map (predicate ns) query_.predicate)
         , subIncludes ns query_.includes
         ]
 
@@ -233,78 +234,71 @@ subIncludes ns =
         []
 
 
-
--- Predicate
-
-
-{-| Convert a `Predicate` to a `QueryParameter` to send to a StandardAPI server.
+{-| Convert a `Operation` to a `QueryParameter` to send to a StandardAPI server.
 -}
-predicate : List String -> List Predicate -> List QueryParameter
+predicate : List String -> Operation -> List QueryParameter
 predicate ns =
-    List.foldl
-        (\( column, operator ) acc ->
-            acc
-                ++ (let
-                        attrKey_ =
-                            attrKey (ns ++ [ "where", column ])
+    predicateHelp (ns ++ [ "where" ])
+        >> List.map
+            (\( keys, value ) ->
+                Builder.string (attrKey keys) value
+            )
 
-                        valueToString =
-                            \value ->
-                                case value of
-                                    Int v ->
-                                        String.fromInt v
 
-                                    String v ->
-                                        v
+predicateHelp : List String -> Operation -> List ( List String, String )
+predicateHelp ns operator =
+    case operator of
+        Logical op ->
+            case op of
+                Conjunction a b ->
+                    predicateHelp (ns ++ [ "[]" ]) a
+                        ++ predicateHelp (ns ++ [ "[]" ]) b
 
-                                    Float v ->
-                                        String.fromFloat v
+                Disjunction a b ->
+                    predicateHelp (ns ++ [ "[]" ]) a
+                        ++ ( ns ++ [ "[]" ], "OR" )
+                        :: predicateHelp (ns ++ [ "[]" ]) b
 
-                                    Bool True ->
-                                        "true"
+        Comparison column op ->
+            case op of
+                Ilike value ->
+                    valueToParams (ns ++ column ++ [ "ilike" ]) value
 
-                                    Bool False ->
-                                        "false"
+                In values ->
+                    List.map (valueToParams (ns ++ column ++ [ "[]" ])) values
+                        |> List.concat
 
-                                    Posix v ->
-                                        Iso8601.fromTime v
-                    in
-                    case operator of
-                        Ilike value ->
-                            [ Builder.string (attrKey_ ++ "[ilike]") (valueToString value) ]
+                NotIn values ->
+                    List.map (valueToParams (ns ++ column ++ [ "[not_in]" ])) values
+                        |> List.concat
 
-                        In values ->
-                            List.map (valueToString >> Builder.string (attrKey_ ++ "[]")) values
+                Lt value ->
+                    valueToParams (ns ++ column ++ [ "lt" ]) value
 
-                        NotIn values ->
-                            List.map (valueToString >> Builder.string (attrKey_ ++ "[not_in][]")) values
+                Lte value ->
+                    valueToParams (ns ++ column ++ [ "lte" ]) value
 
-                        Lt value ->
-                            [ Builder.string (attrKey_ ++ "[lt]") (valueToString value) ]
+                Eq value ->
+                    valueToParams (ns ++ column ++ [ "eq" ]) value
 
-                        Lte value ->
-                            [ Builder.string (attrKey_ ++ "[lte]") (valueToString value) ]
+                Gt value ->
+                    valueToParams (ns ++ column ++ [ "gt" ]) value
 
-                        Eq value ->
-                            [ Builder.string (attrKey_ ++ "[eq]") (valueToString value) ]
+                Gte value ->
+                    valueToParams (ns ++ column ++ [ "gte" ]) value
 
-                        Gt value ->
-                            [ Builder.string (attrKey_ ++ "[gt]") (valueToString value) ]
+                Null ->
+                    [ ( ns ++ column, "false" ) ]
 
-                        Gte value ->
-                            [ Builder.string (attrKey_ ++ "[gte]") (valueToString value) ]
+                Set ->
+                    [ ( ns ++ column, "true" ) ]
 
-                        Null ->
-                            [ Builder.string attrKey_ "false" ]
+                Overlaps values ->
+                    List.map (valueToParams (ns ++ column ++ [ "[overlaps][]" ])) values
+                        |> List.concat
 
-                        Set ->
-                            [ Builder.string attrKey_ "true" ]
-
-                        Overlaps values ->
-                            List.map (valueToString >> Builder.string (attrKey_ ++ "[overlaps][]")) values
-                   )
-        )
-        []
+                Contains value ->
+                    valueToParams (ns ++ column ++ [ "[contains]" ]) value
 
 
 attrKey : List String -> String
@@ -314,8 +308,44 @@ attrKey ns =
             if result == "" then
                 attrName
 
+            else if attrName == "[]" then
+                result ++ attrName
+
             else
                 result ++ "[" ++ attrName ++ "]"
         )
         ""
         ns
+
+
+{-| Turn a `Value` into a set of query parameters.
+-}
+valueToParams : List String -> Value -> List ( List String, String )
+valueToParams ns value =
+    case value of
+        Int v ->
+            [ ( ns, String.fromInt v ) ]
+
+        String v ->
+            [ ( ns, v ) ]
+
+        Float v ->
+            [ ( ns, String.fromFloat v ) ]
+
+        Bool True ->
+            [ ( ns, "true" ) ]
+
+        Bool False ->
+            [ ( ns, "false" ) ]
+
+        Posix v ->
+            [ ( ns, Iso8601.fromTime v ) ]
+
+        Dict v ->
+            Dict.foldr
+                (\k subValue acc ->
+                    valueToParams (ns ++ [ k ]) subValue
+                        ++ acc
+                )
+                []
+                v

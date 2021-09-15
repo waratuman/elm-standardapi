@@ -6,6 +6,7 @@ import StandardApi exposing (..)
 import StandardApi.Url.Builder exposing (..)
 import Test exposing (..)
 import Tree exposing (label, tree)
+import Url exposing (percentDecode)
 
 
 absoluteTest : Test
@@ -37,18 +38,46 @@ absoluteTest =
                     |> Expect.equal "/packages?order%5Bid%5D=desc"
         , test "URL with where" <|
             \() ->
-                absolute [ "packages" ] { emptyQuery | wheres = [ ( "name", Eq (StandardApi.String "standardapi") ) ] }
+                absolute [ "packages" ] { emptyQuery | predicate = Just (Comparison [ "name" ] (Eq (StandardApi.String "standardapi"))) }
                     |> Expect.equal "/packages?where%5Bname%5D%5Beq%5D=standardapi"
         , test "URL with wheres" <|
             \() ->
                 absolute [ "packages" ]
                     { emptyQuery
-                        | wheres =
-                            [ ( "name", Eq (StandardApi.String "standardapi") )
-                            , ( "version", Eq (StandardApi.Int 1) )
-                            ]
+                        | predicate =
+                            Just
+                                (Logical <|
+                                    Conjunction
+                                        (Comparison [ "name" ] (Eq (StandardApi.String "standardapi")))
+                                        (Comparison [ "version" ] (Eq (StandardApi.Int 1)))
+                                )
                     }
-                    |> Expect.equal "/packages?where%5Bname%5D%5Beq%5D=standardapi&where%5Bversion%5D%5Beq%5D=1"
+                    |> percentDecode
+                    |> Maybe.withDefault ""
+                    |> Expect.equal "/packages?where[][name][eq]=standardapi&where[][version][eq]=1"
+        , test "URL predicate with same key" <|
+            \() ->
+                absolute [ "packages" ]
+                    { emptyQuery
+                        | predicate =
+                            Just
+                                (Logical <|
+                                    Conjunction
+                                        (Logical <|
+                                            Conjunction
+                                                (Comparison [ "metadata", "key" ] (Eq (StandardApi.String "name")))
+                                                (Comparison [ "metadata", "value" ] (Eq (StandardApi.String "standardapi")))
+                                        )
+                                        (Logical <|
+                                            Conjunction
+                                                (Comparison [ "metadata", "key" ] (Eq (StandardApi.String "version")))
+                                                (Comparison [ "metadata", "value" ] (Eq (StandardApi.String "1")))
+                                        )
+                                )
+                    }
+                    |> percentDecode
+                    |> Maybe.withDefault ""
+                    |> Expect.equal "/packages?where[][][metadata][key][eq]=name&where[][][metadata][value][eq]=standardapi&where[][][metadata][key][eq]=version&where[][][metadata][value][eq]=1"
         , test "URL with include" <|
             \() ->
                 absolute [ "packages" ]
@@ -104,8 +133,8 @@ absoluteTest =
                                 (include
                                     ( "contributors"
                                     , { emptyQuery
-                                        | wheres =
-                                            [ ( "name", Eq (StandardApi.String "elon") ) ]
+                                        | predicate =
+                                            Just (Comparison [ "name" ] (Eq (StandardApi.String "elon")))
                                       }
                                     )
                                 )
@@ -122,17 +151,21 @@ absoluteTest =
                                 (include
                                     ( "contributors"
                                     , { emptyQuery
-                                        | wheres =
-                                            [ ( "name", Eq (StandardApi.String "elon") )
-                                            , ( "organization", Eq (StandardApi.String "tesla") )
-                                            ]
+                                        | predicate =
+                                            Just <|
+                                                Logical <|
+                                                    Conjunction
+                                                        (Comparison [ "name" ] (Eq (StandardApi.String "elon")))
+                                                        (Comparison [ "organization" ] (Eq (StandardApi.String "tesla")))
                                       }
                                     )
                                 )
                                 []
                             ]
                     }
-                    |> Expect.equal "/packages?include%5Bcontributors%5D%5Bwhere%5D%5Bname%5D%5Beq%5D=elon&include%5Bcontributors%5D%5Bwhere%5D%5Borganization%5D%5Beq%5D=tesla"
+                    |> percentDecode
+                    |> Maybe.withDefault ""
+                    |> Expect.equal "/packages?include[contributors][where][][name][eq]=elon&include[contributors][where][][organization][eq]=tesla"
         , test "URL with include include" <|
             \() ->
                 absolute [ "packages" ]

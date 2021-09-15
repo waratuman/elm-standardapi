@@ -3,8 +3,6 @@
     "tests": [
         "StandardApi",
         "StandardApi.Url.Builder",
-        "StandardApi.Url.Parser",
-        "StandardApi.Url.Parser.Query",
         "./README.md"
     ]
 }

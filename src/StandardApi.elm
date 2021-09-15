@@ -6,9 +6,8 @@ module StandardApi exposing
     , errorToString, request, requestTask, cancel
     , emptyBody, jsonBody
     , expectJson, expectWhatever, jsonResolver
-    , Query, Operator(..), Direction(..), Limit, Offset, Order, Predicate, Value(..), Include(..)
+    , Query, Operation(..), Logical(..), Comparison(..), Direction(..), Limit, Offset, Order, Value(..), Include(..)
     , emptyQuery, include, unwrapInclude
-    -- , bool, float, int, iso8601, predicate, string
     )
 
 {-| Module for interfacing with StandardAPI.
@@ -49,7 +48,7 @@ For example you can make queries like the following:
 
 # Querying
 
-@docs Query, Operator, Direction, Limit, Offset, Order, Predicate, Value, Include
+@docs Query, Operation, Logical, Comparison, Direction, Limit, Offset, Order, Value, Include
 @docs emptyQuery, include, unwrapInclude
 
 
@@ -66,11 +65,11 @@ import Json.Decode as Decode exposing (..)
 import Json.Decode.Extra as Decode exposing (..)
 import Json.Decode.Pipeline exposing (hardcoded, required)
 import Json.Encode as Encode
+import Json.Encode.Extra as Encode
 import Task exposing (Task)
 import Time exposing (Posix)
 import Tree exposing (Tree, tree)
 import Url exposing (Url)
-import Url.Builder as Builder exposing (QueryParameter)
 
 
 {-| Error responses.
@@ -153,26 +152,47 @@ type alias Config =
     }
 
 
+
+-- AST http://ns.inria.fr/ast/sql/index.html
+
+
+{-| A `Predicate` is a list of conditions to be used when building a query. If
+this were SQL, it would be part the `WHERE` or `HAVING` clauses.
+-}
 type alias Query =
     { limit : Limit
     , order : Order
     , offset : Offset
-    , wheres : List Predicate
+    , predicate : Maybe Operation
     , includes : List (Tree Include)
     }
 
 
+{-| A `Value` is used for making comparisions. In the example `x > 3`, `3` is
+the value.
+-}
 type Value
     = Int Int
     | String String
     | Float Float
     | Bool Bool
     | Posix Posix
+    | Dict (Dict String Value)
 
 
-{-| The `Operator` type is used for making comparinsons in a predicate.
+{-| The `Operation` type is used for making comparisons in a predicate.
 -}
-type Operator
+type Operation
+    = Comparison (List String) Comparison
+    | Logical Logical
+
+
+type Logical
+    = Conjunction Operation Operation
+    | Disjunction Operation Operation
+
+
+type Comparison
     = Ilike Value
     | In (List Value)
     | NotIn (List Value)
@@ -184,6 +204,7 @@ type Operator
     | Null
     | Set
     | Overlaps (List Value)
+    | Contains Value
 
 
 {-| The `Direction` type is used to order a query.
@@ -214,13 +235,6 @@ a `Just x`, then the offset will be x.
 -}
 type alias Offset =
     Maybe Int
-
-
-{-| A `Predicate` is a list of conditions to be used when building a query. If
-this were SQL, it would be part the `WHERE` or `HAVING` clauses.
--}
-type alias Predicate =
-    ( String, Operator )
 
 
 type Include
@@ -261,7 +275,7 @@ emptyQuery =
     { limit = Nothing
     , order = []
     , offset = Nothing
-    , wheres = []
+    , predicate = Nothing
     , includes = []
     }
 
@@ -438,6 +452,8 @@ schemaRequest config { msg, tracker } =
         }
 
 
+{-| Just like `schemaRequest`, but it creates a `Task`.
+-}
 schemaRequestTask :
     Config
     -> Task Error Schema
