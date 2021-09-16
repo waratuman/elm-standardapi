@@ -6,7 +6,7 @@ module StandardApi exposing
     , errorToString, request, requestTask, cancel
     , emptyBody, jsonBody
     , expectJson, expectWhatever, jsonResolver
-    , Query, Operation(..), Logical(..), Comparison(..), Direction(..), Limit, Offset, Order, Value(..), Include(..)
+    , Query, Operation(..), Direction(..), Limit, Offset, Order, Value(..), Include(..)
     , emptyQuery, include, unwrapInclude
     )
 
@@ -48,7 +48,7 @@ For example you can make queries like the following:
 
 # Querying
 
-@docs Query, Operation, Logical, Comparison, Direction, Limit, Offset, Order, Value, Include
+@docs Query, Operation, Direction, Limit, Offset, Order, Value, Include
 @docs emptyQuery, include, unwrapInclude
 
 
@@ -156,8 +156,8 @@ type alias Config =
 -- AST http://ns.inria.fr/ast/sql/index.html
 
 
-{-| A `Predicate` is a list of conditions to be used when building a query. If
-this were SQL, it would be part the `WHERE` or `HAVING` clauses.
+{-| A `Query` is used to make a request against the server. This is similar to a
+SQL query.
 -}
 type alias Query =
     { limit : Limit
@@ -168,7 +168,7 @@ type alias Query =
     }
 
 
-{-| A `Value` is used for making comparisions. In the example `x > 3`, `3` is
+{-| A `Value` is used for making comparisons. In the example `x > 3`, `3` is
 the value.
 -}
 type Value
@@ -183,28 +183,20 @@ type Value
 {-| The `Operation` type is used for making comparisons in a predicate.
 -}
 type Operation
-    = Comparison (List String) Comparison
-    | Logical Logical
-
-
-type Logical
-    = Conjunction Operation Operation
+    = Ilike (List String) Value
+    | In (List String) (List Value)
+    | NotIn (List String) (List Value)
+    | Lt (List String) Value
+    | Lte (List String) Value
+    | Eq (List String) Value
+    | Gt (List String) Value
+    | Gte (List String) Value
+    | Null (List String)
+    | Set (List String)
+    | Overlaps (List String) (List Value)
+    | Contains (List String) Value
+    | Conjunction Operation Operation
     | Disjunction Operation Operation
-
-
-type Comparison
-    = Ilike Value
-    | In (List Value)
-    | NotIn (List Value)
-    | Lt Value
-    | Lte Value
-    | Eq Value
-    | Gt Value
-    | Gte Value
-    | Null
-    | Set
-    | Overlaps (List Value)
-    | Contains Value
 
 
 {-| The `Direction` type is used to order a query.
@@ -237,6 +229,10 @@ type alias Offset =
     Maybe Int
 
 
+{-| The `Include` type is for including related results in a query. For example,
+in the query `{ emptyQuery | includes = [ include ( "line_items", emptyQuery ) ]`
+would include related `line_items` in the response.
+-}
 type Include
     = Include ( String, Query )
 

@@ -16,7 +16,6 @@ import Dict
 import Iso8601
 import StandardApi exposing (..)
 import String
-import Time exposing (Posix)
 import Tree exposing (Tree, children)
 import Url.Builder as Builder exposing (QueryParameter)
 
@@ -246,59 +245,55 @@ predicate ns =
 
 
 predicateHelp : List String -> Operation -> List ( List String, String )
-predicateHelp ns operator =
-    case operator of
-        Logical op ->
-            case op of
-                Conjunction a b ->
-                    predicateHelp (ns ++ [ "[]" ]) a
-                        ++ predicateHelp (ns ++ [ "[]" ]) b
+predicateHelp ns op =
+    case op of
+        Conjunction a b ->
+            predicateHelp (ns ++ [ "[]" ]) a
+                ++ predicateHelp (ns ++ [ "[]" ]) b
 
-                Disjunction a b ->
-                    predicateHelp (ns ++ [ "[]" ]) a
-                        ++ ( ns ++ [ "[]" ], "OR" )
-                        :: predicateHelp (ns ++ [ "[]" ]) b
+        Disjunction a b ->
+            predicateHelp (ns ++ [ "[]" ]) a
+                ++ ( ns ++ [ "[]" ], "OR" )
+                :: predicateHelp (ns ++ [ "[]" ]) b
 
-        Comparison column op ->
-            case op of
-                Ilike value ->
-                    valueToParams (ns ++ column ++ [ "ilike" ]) value
+        Ilike column value ->
+            valueToParams (ns ++ column ++ [ "ilike" ]) value
 
-                In values ->
-                    List.map (valueToParams (ns ++ column ++ [ "[]" ])) values
-                        |> List.concat
+        In column values ->
+            List.map (valueToParams (ns ++ column ++ [ "[]" ])) values
+                |> List.concat
 
-                NotIn values ->
-                    List.map (valueToParams (ns ++ column ++ [ "[not_in]" ])) values
-                        |> List.concat
+        NotIn column values ->
+            List.map (valueToParams (ns ++ column ++ [ "[not_in]" ])) values
+                |> List.concat
 
-                Lt value ->
-                    valueToParams (ns ++ column ++ [ "lt" ]) value
+        Lt column value ->
+            valueToParams (ns ++ column ++ [ "lt" ]) value
 
-                Lte value ->
-                    valueToParams (ns ++ column ++ [ "lte" ]) value
+        Lte column value ->
+            valueToParams (ns ++ column ++ [ "lte" ]) value
 
-                Eq value ->
-                    valueToParams (ns ++ column ++ [ "eq" ]) value
+        Eq column value ->
+            valueToParams (ns ++ column ++ [ "eq" ]) value
 
-                Gt value ->
-                    valueToParams (ns ++ column ++ [ "gt" ]) value
+        Gt column value ->
+            valueToParams (ns ++ column ++ [ "gt" ]) value
 
-                Gte value ->
-                    valueToParams (ns ++ column ++ [ "gte" ]) value
+        Gte column value ->
+            valueToParams (ns ++ column ++ [ "gte" ]) value
 
-                Null ->
-                    [ ( ns ++ column, "false" ) ]
+        Null column ->
+            [ ( ns ++ column, "false" ) ]
 
-                Set ->
-                    [ ( ns ++ column, "true" ) ]
+        Set column ->
+            [ ( ns ++ column, "true" ) ]
 
-                Overlaps values ->
-                    List.map (valueToParams (ns ++ column ++ [ "[overlaps][]" ])) values
-                        |> List.concat
+        Overlaps column values ->
+            List.map (valueToParams (ns ++ column ++ [ "[overlaps][]" ])) values
+                |> List.concat
 
-                Contains value ->
-                    valueToParams (ns ++ column ++ [ "[contains]" ]) value
+        Contains column value ->
+            valueToParams (ns ++ column ++ [ "[contains]" ]) value
 
 
 attrKey : List String -> String

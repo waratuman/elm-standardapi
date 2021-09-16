@@ -38,7 +38,7 @@ absoluteTest =
                     |> Expect.equal "/packages?order%5Bid%5D=desc"
         , test "URL with where" <|
             \() ->
-                absolute [ "packages" ] { emptyQuery | predicate = Just (Comparison [ "name" ] (Eq (StandardApi.String "standardapi"))) }
+                absolute [ "packages" ] { emptyQuery | predicate = Just (Eq [ "name" ] (StandardApi.String "standardapi")) }
                     |> Expect.equal "/packages?where%5Bname%5D%5Beq%5D=standardapi"
         , test "URL with wheres" <|
             \() ->
@@ -46,10 +46,9 @@ absoluteTest =
                     { emptyQuery
                         | predicate =
                             Just
-                                (Logical <|
-                                    Conjunction
-                                        (Comparison [ "name" ] (Eq (StandardApi.String "standardapi")))
-                                        (Comparison [ "version" ] (Eq (StandardApi.Int 1)))
+                                (Conjunction
+                                    (Eq [ "name" ] (StandardApi.String "standardapi"))
+                                    (Eq [ "version" ] (StandardApi.Int 1))
                                 )
                     }
                     |> percentDecode
@@ -61,18 +60,15 @@ absoluteTest =
                     { emptyQuery
                         | predicate =
                             Just
-                                (Logical <|
-                                    Conjunction
-                                        (Logical <|
-                                            Conjunction
-                                                (Comparison [ "metadata", "key" ] (Eq (StandardApi.String "name")))
-                                                (Comparison [ "metadata", "value" ] (Eq (StandardApi.String "standardapi")))
-                                        )
-                                        (Logical <|
-                                            Conjunction
-                                                (Comparison [ "metadata", "key" ] (Eq (StandardApi.String "version")))
-                                                (Comparison [ "metadata", "value" ] (Eq (StandardApi.String "1")))
-                                        )
+                                (Conjunction
+                                    (Conjunction
+                                        (Eq [ "metadata", "key" ] (StandardApi.String "name"))
+                                        (Eq [ "metadata", "value" ] (StandardApi.String "standardapi"))
+                                    )
+                                    (Conjunction
+                                        (Eq [ "metadata", "key" ] (StandardApi.String "version"))
+                                        (Eq [ "metadata", "value" ] (StandardApi.String "1"))
+                                    )
                                 )
                     }
                     |> percentDecode
@@ -134,7 +130,7 @@ absoluteTest =
                                     ( "contributors"
                                     , { emptyQuery
                                         | predicate =
-                                            Just (Comparison [ "name" ] (Eq (StandardApi.String "elon")))
+                                            Just (Eq [ "name" ] (StandardApi.String "elon"))
                                       }
                                     )
                                 )
@@ -153,10 +149,9 @@ absoluteTest =
                                     , { emptyQuery
                                         | predicate =
                                             Just <|
-                                                Logical <|
-                                                    Conjunction
-                                                        (Comparison [ "name" ] (Eq (StandardApi.String "elon")))
-                                                        (Comparison [ "organization" ] (Eq (StandardApi.String "tesla")))
+                                                Conjunction
+                                                    (Eq [ "name" ] (StandardApi.String "elon"))
+                                                    (Eq [ "organization" ] (StandardApi.String "tesla"))
                                       }
                                     )
                                 )
