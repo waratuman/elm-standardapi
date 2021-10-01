@@ -3,9 +3,10 @@
     "name": "waratuman/elm-standardapi",
     "summary": "Elm client for StandardAPI",
     "license": "BSD-3-Clause",
-    "version": "7.0.0",
+    "version": "7.1.0",
     "exposed-modules": [
-        "StandardApi"
+        "StandardApi",
+        "StandardApi.Url.Builder"
     ],
     "elm-version": "0.19.1 <= v <= 0.20.0",
     "dependencies": {

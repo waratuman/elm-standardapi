@@ -1,14 +1,11 @@
-module StandardApi.Url.Builder exposing
-    ( absolute, includes, predicate, query, offset
-    , limit, order
-    )
+module StandardApi.Url.Builder exposing (absolute, includes, limit, order, predicate, query, offset)
 
 {-|
 
 
 ## Generation
 
-@docs absolute, includes, limit order, predicate, query, offset
+@docs absolute, includes, limit, order, predicate, query, offset
 
 -}
 
