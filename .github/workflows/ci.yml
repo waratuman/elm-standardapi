@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Elm
+        uses: jorelali/setup-elm@v5
+        with:
+          elm-version: 0.19.1
+
+      - name: Install elm-test
+        run: npm install -g elm-test@0.19.1-revision7
+
+      - name: Test
+        run: elm-test
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install elm-format
+        run: npm install -g elm-format
+
+      - name: Check formatting
+        run: elm-format --validate src/ tests/
