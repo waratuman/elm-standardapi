@@ -325,7 +325,7 @@ request config { method, headers, path, body, expect, tracker } =
         url =
             { baseUrl | path = path }
     in
-    Http.riskyRequest
+    Http.request
         { method = method
         , headers =
             ( "Accept", config.format )
@@ -368,7 +368,7 @@ requestTask config { method, headers, path, body, resolver } =
         url =
             { baseUrl | path = path }
     in
-    Http.riskyTask
+    Http.task
         { method = method
         , headers =
             ( "Accept", config.format )
