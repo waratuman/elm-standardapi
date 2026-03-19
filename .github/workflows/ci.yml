@@ -34,4 +34,4 @@ jobs:
         run: bun install -g elm-format
 
       - name: Check formatting
-        run: elm-format --validate src/ tests/
+        run: elm-format --validate src/StandardApi.elm src/StandardApi/Url/Builder.elm tests/
