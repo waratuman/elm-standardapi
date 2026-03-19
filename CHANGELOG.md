@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.1] - 2026-03-19
+
 ### Changed
 - `request` and `requestTask` now use `Http.request` / `Http.task` instead of
   `Http.riskyRequest` / `Http.riskyTask`. Cross-origin cookie sending
