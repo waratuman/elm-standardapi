@@ -1,5 +1,4 @@
 {
-    "root": "../src",
     "tests": [
         "StandardApi",
         "StandardApi.Url.Builder",

@@ -17,8 +17,11 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
-      - name: Install elm-test
-        run: bun install -g elm-test@0.19.1-revision7
+      - name: Install elm-test and elm-verify-examples
+        run: bun install -g elm-test@0.19.1-revision7 elm-verify-examples
+
+      - name: Verify documentation examples
+        run: elm-verify-examples
 
       - name: Test
         run: elm-test
