@@ -40,6 +40,10 @@ absoluteTest =
             \() ->
                 absolute [ "packages" ] { emptyQuery | predicate = Just (Eq [ "name" ] (StandardApi.String "standardapi")) }
                     |> Expect.equal "/packages?where%5Bname%5D%5Beq%5D=standardapi"
+        , test "URL with where not equal" <|
+            \() ->
+                absolute [ "packages" ] { emptyQuery | predicate = Just (Neq [ "name" ] (StandardApi.String "standardapi")) }
+                    |> Expect.equal "/packages?where%5Bname%5D%5Bnot_eq%5D=standardapi"
         , test "URL with wheres" <|
             \() ->
                 absolute [ "packages" ]

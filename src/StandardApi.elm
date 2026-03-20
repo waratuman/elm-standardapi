@@ -194,6 +194,7 @@ type Operation
     | Lt (List String) Value
     | Lte (List String) Value
     | Eq (List String) Value
+    | Neq (List String) Value
     | Gt (List String) Value
     | Gte (List String) Value
     | Null (List String)
@@ -609,7 +610,7 @@ expectWhatever toMsg =
 
                 Http.BadStatus_ metadata body ->
                     Err <|
-                        BadStatus metadata.statusCode ""
+                        BadStatus metadata.statusCode body
 
                 Http.GoodStatus_ metadata body ->
                     Ok ()
