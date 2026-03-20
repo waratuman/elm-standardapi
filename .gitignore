@@ -4,3 +4,7 @@ elm-stuff
 repl-temp-*
 # elm-verify-examples files
 tests/VerifyExamples
+# npm
+node_modules
+package.json
+package-lock.json
