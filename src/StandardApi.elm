@@ -604,7 +604,7 @@ expectWhatever toMsg =
 
                 Http.BadStatus_ metadata body ->
                     Err <|
-                        BadStatus metadata.statusCode ""
+                        BadStatus metadata.statusCode body
 
                 Http.GoodStatus_ metadata body ->
                     Ok ()
