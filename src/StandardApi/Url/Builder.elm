@@ -273,6 +273,9 @@ predicateHelp ns op =
         Eq column value ->
             valueToParams (ns ++ column ++ [ "eq" ]) value
 
+        Neq column value ->
+            valueToParams (ns ++ column ++ [ "not_eq" ]) value
+
         Gt column value ->
             valueToParams (ns ++ column ++ [ "gt" ]) value
 
