@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.1.3] - 2026-03-20
+
+### Fixed
+- `errorToString` now adds a separator (`: `) between HTTP status description and error message body. Edge case: empty message bodies produce no trailing separator (e.g., `BadStatus 404 ""` → `"404 Not Found"`).
+
 ## [7.1.2] - 2026-03-20
 
 ### Added

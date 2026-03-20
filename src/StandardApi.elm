@@ -135,7 +135,12 @@ errorToString err =
                         _ ->
                             ""
                    )
-                ++ message
+                ++ (if String.isEmpty message then
+                        ""
+
+                    else
+                        ": " ++ message
+                   )
 
         BadBody body ->
             "bad body:\n" ++ body
