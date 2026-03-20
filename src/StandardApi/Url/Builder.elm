@@ -261,7 +261,7 @@ predicateHelp ns op =
                 |> List.concat
 
         NotIn column values ->
-            List.map (valueToParams (ns ++ column ++ [ "[not_in]" ])) values
+            List.map (valueToParams (ns ++ column ++ [ "not_in", "[]" ])) values
                 |> List.concat
 
         Lt column value ->
@@ -289,11 +289,11 @@ predicateHelp ns op =
             [ ( ns ++ column, "true" ) ]
 
         Overlaps column values ->
-            List.map (valueToParams (ns ++ column ++ [ "[overlaps][]" ])) values
+            List.map (valueToParams (ns ++ column ++ [ "overlaps", "[]" ])) values
                 |> List.concat
 
         Contains column value ->
-            valueToParams (ns ++ column ++ [ "[contains]" ]) value
+            valueToParams (ns ++ column ++ [ "contains" ]) value
 
 
 attrKey : List String -> String

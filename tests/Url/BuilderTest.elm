@@ -165,6 +165,36 @@ absoluteTest =
                     |> percentDecode
                     |> Maybe.withDefault ""
                     |> Expect.equal "/packages?include[contributors][where][][name][eq]=elon&include[contributors][where][][organization][eq]=tesla"
+        , test "URL with not_in" <|
+            \() ->
+                absolute [ "packages" ]
+                    { emptyQuery
+                        | predicate =
+                            Just (NotIn [ "id" ] [ StandardApi.Int 1, StandardApi.Int 2 ])
+                    }
+                    |> percentDecode
+                    |> Maybe.withDefault ""
+                    |> Expect.equal "/packages?where[id][not_in][]=1&where[id][not_in][]=2"
+        , test "URL with overlaps" <|
+            \() ->
+                absolute [ "packages" ]
+                    { emptyQuery
+                        | predicate =
+                            Just (Overlaps [ "tags" ] [ StandardApi.String "elm", StandardApi.String "api" ])
+                    }
+                    |> percentDecode
+                    |> Maybe.withDefault ""
+                    |> Expect.equal "/packages?where[tags][overlaps][]=elm&where[tags][overlaps][]=api"
+        , test "URL with contains" <|
+            \() ->
+                absolute [ "packages" ]
+                    { emptyQuery
+                        | predicate =
+                            Just (Contains [ "region_ids" ] (StandardApi.Int 20106))
+                    }
+                    |> percentDecode
+                    |> Maybe.withDefault ""
+                    |> Expect.equal "/packages?where[region_ids][contains]=20106"
         , test "URL with include include" <|
             \() ->
                 absolute [ "packages" ]
