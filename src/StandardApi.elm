@@ -301,8 +301,7 @@ emptyQuery =
         , headers = []
         , path = "/posts"
         , body = emptyBody
-        , msg = ReceivedPosts
-        , decoder = list postDecoder
+        , expect = expectJson ReceivedPosts (list postDecoder)
         , tracker = Nothing
         }
 
