@@ -7,26 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [7.1.3] - 2026-03-20
+## [8.0.0] - 2026-03-20
 
-### Fixed
-- `errorToString` now adds a separator (`: `) between HTTP status description and error message body. Edge case: empty message bodies produce no trailing separator (e.g., `BadStatus 404 ""` → `"404 Not Found"`).
-
-## [7.1.2] - 2026-03-20
-
-### Added
-- `Neq` operator for not-equal comparisons in predicates. Serializes to `not_eq` query parameter, following StandardAPI conventions.
-
-## [7.1.1] - 2026-03-19
-
-### Changed
+### Breaking Changes
 - `request` and `requestTask` now use `Http.request` / `Http.task` instead of
   `Http.riskyRequest` / `Http.riskyTask`. Cross-origin cookie sending
   (`withCredentials`) is no longer enabled by default. Auth via headers
-  (e.g. `Api-Key`) and same-origin cookies are unaffected. For cross-origin
-  deployments, servers can use the `Sec-Fetch-Site` request header to
-  distinguish same-origin from cross-site requests and enforce access control
-  server-side.
+  (e.g. `Api-Key`) and same-origin cookies are unaffected.
+
+### Added
+- `Neq` operator for not-equal comparisons in predicates. Serializes to
+  `not_eq` query parameter, following StandardAPI conventions.
+
+### Fixed
+- URL encoding for `NotIn`, `Overlaps`, and `Contains` predicates.
+- Response body now passed through in `expectWhatever` error handling.
+- `errorToString` now adds a separator (`: `) between HTTP status description
+  and error message body.
 
 ## [7.1.0] - 2021-10-01
 
