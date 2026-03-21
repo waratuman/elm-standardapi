@@ -7,8 +7,7 @@ module StandardApi exposing
     , emptyBody, jsonBody
     , expectJson, expectWhatever, jsonResolver
     , Query, Operation(..), Direction(..), Limit, Offset, Order, Value(..), Include(..)
-    , emptyQuery, include, unwrapInclude
-    , modelToTypes
+    , emptyQuery, include, unwrapInclude, modelToTypes
     )
 
 {-| Module for interfacing with StandardAPI.
@@ -286,6 +285,8 @@ emptyQuery =
 
 {-| Convert a `Model` to a list of `( String, Type )` pairs suitable for
 passing to `StandardApi.Url.Parser.Query.parse`.
+
+    import StandardApi.Type as Type
 
     modelToTypes { name = "test", attributes = [ { name = "id", type_ = Type.Int, default = Nothing, primaryKey = True, null = False, array = False, comment = "" } ], comment = "" }
     --> [ ( "id", Type.Int ) ]

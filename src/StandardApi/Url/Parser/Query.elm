@@ -675,7 +675,8 @@ combineWithConjunction ops =
         first :: rest ->
             let
                 merged =
-                    first :: rest
+                    first
+                        :: rest
                         |> mergeMultiValueOps
                         |> mergeDictOps
             in
