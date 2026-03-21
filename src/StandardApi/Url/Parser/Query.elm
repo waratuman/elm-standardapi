@@ -193,8 +193,8 @@ parseOrder ns params =
                 |> List.filterMap
                     (\( keys, value ) ->
                         case stripPrefix prefix keys of
-                            Just [ column ] ->
-                                Just ( column, value )
+                            Just (first :: rest) ->
+                                Just ( String.join "." (first :: rest), value )
 
                             _ ->
                                 Nothing

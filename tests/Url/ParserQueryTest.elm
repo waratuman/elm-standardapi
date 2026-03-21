@@ -94,6 +94,10 @@ orderTests =
             \() ->
                 Parser.parse noTypes "order%5Bid%5D=asc&order%5Bname%5D=desc"
                     |> Expect.equal (Ok { emptyQuery | order = [ ( "id", Asc ), ( "name", Desc ) ] })
+        , test "nested order column" <|
+            \() ->
+                Parser.parse noTypes "order%5Bsource_transaction%5D%5Bexecuted_at%5D=desc"
+                    |> Expect.equal (Ok { emptyQuery | order = [ ( "source_transaction.executed_at", Desc ) ] })
         ]
 
 
