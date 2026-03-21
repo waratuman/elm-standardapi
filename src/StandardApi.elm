@@ -8,6 +8,7 @@ module StandardApi exposing
     , expectJson, expectWhatever, jsonResolver
     , Query, Operation(..), Direction(..), Limit, Offset, Order, Value(..), Include(..)
     , emptyQuery, include, unwrapInclude
+    , modelToTypes
     )
 
 {-| Module for interfacing with StandardAPI.
@@ -49,7 +50,7 @@ For example you can make queries like the following:
 # Querying
 
 @docs Query, Operation, Direction, Limit, Offset, Order, Value, Include
-@docs emptyQuery, include, unwrapInclude
+@docs emptyQuery, include, unwrapInclude, modelToTypes
 
 
 # Url generation
@@ -66,6 +67,7 @@ import Json.Decode.Extra as Decode exposing (..)
 import Json.Decode.Pipeline exposing (hardcoded, required)
 import Json.Encode as Encode
 import Json.Encode.Extra as Encode
+import StandardApi.Type as Type exposing (Type)
 import Task exposing (Task)
 import Time exposing (Posix)
 import Tree exposing (Tree, tree)
@@ -282,6 +284,18 @@ emptyQuery =
     }
 
 
+{-| Convert a `Model` to a list of `( String, Type )` pairs suitable for
+passing to `StandardApi.Url.Parser.Query.parse`.
+
+    modelToTypes { name = "test", attributes = [ { name = "id", type_ = Type.Int, default = Nothing, primaryKey = True, null = False, array = False, comment = "" } ], comment = "" }
+    --> [ ( "id", Type.Int ) ]
+
+-}
+modelToTypes : Model -> List ( String, Type.Type )
+modelToTypes model =
+    List.map (\attr -> ( attr.name, attr.type_ )) model.attributes
+
+
 {-| Create a HTTP request to a StandardAPI enpoint.
 
     import Url exposing (Protocol(..))
@@ -424,7 +438,7 @@ type alias Model =
 -}
 type alias Attribute =
     { name : String
-    , type_ : String
+    , type_ : Type
     , default : Maybe String
     , primaryKey : Bool
     , null : Bool
@@ -557,7 +571,18 @@ attributeDecoder : Decoder Attribute
 attributeDecoder =
     Decode.succeed Attribute
         |> hardcoded ""
-        |> required "type" string
+        |> required "type"
+            (string
+                |> Decode.andThen
+                    (\s ->
+                        case Type.fromString s of
+                            Ok t ->
+                                Decode.succeed t
+
+                            Err err ->
+                                Decode.fail err
+                    )
+            )
         |> required "default" (maybe string)
         |> required "primary_key" bool
         |> required "null" bool
