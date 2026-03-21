@@ -327,6 +327,9 @@ valueToParams ns value =
         Float v ->
             [ ( ns, String.fromFloat v ) ]
 
+        Decimal v ->
+            [ ( ns, v ) ]
+
         Bool True ->
             [ ( ns, "true" ) ]
 

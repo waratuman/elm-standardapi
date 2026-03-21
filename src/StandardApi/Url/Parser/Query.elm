@@ -607,6 +607,9 @@ decodeValue types column str =
                 Err _ ->
                     Err ("expected ISO 8601 datetime for " ++ String.join "." column ++ ", got: " ++ str)
 
+        Just Type.Decimal ->
+            Ok (Decimal str)
+
         Just Type.String ->
             Ok (String str)
 

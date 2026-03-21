@@ -18,9 +18,12 @@ type Type
     | Bool
     | Posix
     | Dict
+    | Decimal
 
 
-{-| Parse a type string from the server into a `Type`.
+{-| Parse a type string from the server into a `Type`. Unrecognized types
+default to `String` so that the attribute decoder never fails on unknown
+PostgreSQL or Rails types.
 
     fromString "integer"
     --> Ok Int
@@ -32,13 +35,31 @@ type Type
     --> Ok Posix
 
     fromString "decimal"
-    --> Ok Float
+    --> Ok Decimal
 
     fromString "boolean"
     --> Ok Bool
 
     fromString "hash"
     --> Ok Dict
+
+    fromString "text"
+    --> Ok String
+
+    fromString "uuid"
+    --> Ok String
+
+    fromString "jsonb"
+    --> Ok Dict
+
+    fromString "numeric"
+    --> Ok Float
+
+    fromString "date"
+    --> Ok String
+
+    fromString "inet"
+    --> Ok String
 
 -}
 fromString : String -> Result String Type
@@ -47,10 +68,52 @@ fromString str =
         "integer" ->
             Ok Int
 
+        "bigint" ->
+            Ok Int
+
+        "smallint" ->
+            Ok Int
+
         "string" ->
             Ok String
 
+        "text" ->
+            Ok String
+
+        "uuid" ->
+            Ok String
+
+        "inet" ->
+            Ok String
+
+        "cidr" ->
+            Ok String
+
+        "macaddr" ->
+            Ok String
+
+        "citext" ->
+            Ok String
+
+        "binary" ->
+            Ok String
+
+        "date" ->
+            Ok String
+
+        "time" ->
+            Ok String
+
         "decimal" ->
+            Ok Decimal
+
+        "numeric" ->
+            Ok Decimal
+
+        "money" ->
+            Ok Decimal
+
+        "float" ->
             Ok Float
 
         "boolean" ->
@@ -62,5 +125,14 @@ fromString str =
         "hash" ->
             Ok Dict
 
+        "hstore" ->
+            Ok Dict
+
+        "json" ->
+            Ok Dict
+
+        "jsonb" ->
+            Ok Dict
+
         _ ->
-            Err ("unknown type: " ++ str)
+            Ok String

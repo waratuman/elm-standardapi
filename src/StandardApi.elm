@@ -184,6 +184,7 @@ type Value
     | Bool Bool
     | Posix Posix
     | Dict (Dict String Value)
+    | Decimal String
 
 
 {-| The `Operation` type is used for making comparisons in a predicate.
