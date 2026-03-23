@@ -39,6 +39,42 @@ SaUrl.absolute [ "accounts" ]
 --> "/accounts?include%5Bemails%5D=true"
 ```
 
+# URL Parser
+
+Parse URL query strings back into `Query` values using
+`StandardApi.Url.Parser.Query`:
+
+```elm
+import StandardApi exposing (..)
+import StandardApi.Type as Type
+import StandardApi.Url.Parser.Query as Parser
+
+-- Without type info, values are guessed from the raw string
+Parser.parse [] "limit=10&order%5Bcreated_at%5D=desc"
+--> Ok { emptyQuery | limit = Just 10, order = [ ( "created_at", Desc ) ] }
+
+-- With type info, values are decoded according to the schema
+Parser.parse [ ( "id", Type.Int ) ] "where%5Bid%5D%5Beq%5D=42"
+--> Ok { emptyQuery | predicate = Just (Eq [ "id" ] (Int 42)) }
+
+-- Type mismatches produce clear error messages
+Parser.parse [ ( "id", Type.Int ) ] "where%5Bid%5D%5Beq%5D=abc"
+--> Err "expected integer for id, got: abc"
+```
+
+If you have a `Model` from the schema, convert it to type mappings with
+`modelToTypes`:
+
+```elm
+Parser.parse (modelToTypes model) queryString
+```
+
+You can also parse directly from a `Url`:
+
+```elm
+Parser.parseUrl [] url
+```
+
 # Example
 
 ```elm

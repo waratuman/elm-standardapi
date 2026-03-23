@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (e.g. `Api-Key`) and same-origin cookies are unaffected.
 
 ### Added
+- `StandardApi.Url.Parser.Query` module for parsing URL query strings back into
+  `Query` values, complementing the existing URL builder. Supports type-driven
+  decoding, strict error handling, and roundtrip conversion.
+- `StandardApi.Type` module exposing type information for schema fields.
+- `modelToTypes` helper function to convert schema `Model` to type mappings for
+  the parser.
 - `Neq` operator for not-equal comparisons in predicates. Serializes to
   `not_eq` query parameter, following StandardAPI conventions.
 
